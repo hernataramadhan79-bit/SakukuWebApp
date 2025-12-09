@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="128" fill="#6366f1"/>
+
+  <!-- Wallet Icon (centered) -->
+  <g transform="translate(256, 220)">
+    <!-- Wallet body -->
+    <rect x="-80" y="-40" width="160" height="80" rx="20" fill="white"/>
+    <!-- Wallet fold -->
+    <rect x="-80" y="-40" width="160" height="20" rx="10" fill="#22d3ee"/>
+    <!-- Wallet handle -->
+    <rect x="-60" y="-55" width="120" height="15" rx="7.5" fill="#0891b2"/>
+    <!-- Wallet clasp -->
+    <circle cx="0" cy="-30" r="8" fill="#0891b2"/>
+    <!-- Card inside -->
+    <rect x="-40" y="-10" width="80" height="50" rx="5" fill="#e0f2fe"/>
+    <rect x="-35" y="0" width="70" height="3" rx="1.5" fill="#0891b2"/>
+    <rect x="-35" y="15" width="55" height="3" rx="1.5" fill="#0891b2"/>
+    <rect x="-35" y="30" width="40" height="3" rx="1.5" fill="#0891b2"/>
+  </g>
+
+  <!-- Sakuku Text -->
+  <text x="256" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="900" fill="white">SAKUKU</text>
+</svg>

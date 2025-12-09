@@ -1,0 +1,462 @@
+:root {
+  --bg-color: #000000;
+  --text-color: #ffffff;
+  --glass-bg: rgba(255, 255, 255, 0.1); /* Increased opacity for visibility */
+  --glass-border: rgba(255, 255, 255, 0.2); /* Stronger border */
+  --nav-bg: rgba(18, 18, 18, 0.8);
+  --nav-blob: rgba(255, 255, 255, 0.15);
+}
+
+.light-mode {
+  --bg-color: #f0f2f5;
+  --text-color: #1a1a1a;
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --nav-bg: rgba(255, 255, 255, 0.8);
+  --nav-blob: rgba(0, 0, 0, 0.05);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  /* Lock viewport to prevent browser chrome scrolling glitches */
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  overscroll-behavior: none; /* Prevents rubber-banding/bouncing which makes headers feel loose */
+  -webkit-tap-highlight-color: transparent;
+  /* Fallback transition for browsers without View Transitions */
+  transition: background-color 0.6s cubic-bezier(0.4, 0, 0.2, 1), color 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+ 
+/* UNIVERSAL SMOOTH COLOR TRANSITION */
+/* This ensures individual elements also morph their colors smoothly if ViewTransition isn't active */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke, shadow, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 0.3s;
+}
+ 
+/* Exclude layout properties from universal transition to prevent jitter */
+ 
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+/* VIEW TRANSITION API ANIMATION */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.6s; /* Duration of the theme switch */
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+ 
+/* Disable default cross-fade blending to keep colors pure */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+/* Background Orbs Animation */
+@keyframes drift {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+ 
+@keyframes drift2 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(-30px, 50px) scale(1.2); }
+  66% { transform: translate(20px, -20px) scale(0.8); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.blob {
+  position: absolute;
+  filter: blur(80px);
+  opacity: 0.6;
+  z-index: -1;
+  animation: drift 10s infinite ease-in-out;
+}
+ 
+.blob-2 {
+  animation: drift2 12s infinite ease-in-out reverse;
+}
+
+/* Custom Scrollbar - Slim & Glassy */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2); 
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.4); 
+}
+
+/* Liquid UI Interactions */
+.liquid-hover {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.liquid-hover:active {
+  transform: scale(0.9);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 0 rgba(0,0,0,0); /* subtle inner shadow on click */
+}
+ 
+/* Smooth Page Transition */
+@keyframes liquidFlowIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.animate-liquid-enter {
+  animation: liquidFlowIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  will-change: transform, opacity, filter;
+}
+
+/* Popup Liquid Entrance Animation */
+@keyframes liquidPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+    filter: blur(10px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05) translateY(-5px);
+    filter: blur(0px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-liquid-pop {
+  animation: liquidPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+ 
+/* NEW SMOOTH APPEAR (No Bounce) */
+@keyframes smoothAppear {
+  from { opacity: 0; transform: scale(0.96); filter: blur(4px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0px); }
+}
+ 
+.animate-smooth-appear {
+  animation: smoothAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Popup Liquid Exit Animation */
+@keyframes liquidScaleDown {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+    filter: blur(10px);
+  }
+}
+ 
+.animate-liquid-scale-down {
+  animation: liquidScaleDown 0.4s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+}
+ 
+/* Backdrop Fade Animations */
+@keyframes backdropFade {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(8px); }
+}
+ 
+.animate-backdrop {
+  animation: backdropFade 0.4s ease-out forwards;
+}
+
+@keyframes backdropFadeOut {
+  from { opacity: 1; backdrop-filter: blur(8px); }
+  to { opacity: 0; backdrop-filter: blur(0px); }
+}
+ 
+.animate-backdrop-out {
+  animation: backdropFadeOut 0.4s ease-in forwards;
+}
+
+/* Liquid Input Focus Effect */
+.liquid-input {
+  transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.liquid-input:focus-within {
+  transform: scale(1.02);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.15); /* Soft glow */
+}
+
+/* AI Insights Liquid Animations */
+@keyframes liquidRipple {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-liquid-ripple {
+  animation: liquidRipple 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes liquidFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+
+.animate-liquid-float {
+  animation: liquidFloat 3s ease-in-out infinite;
+}
+
+@keyframes liquidGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.6), 0 0 40px rgba(99, 102, 241, 0.4); }
+}
+
+.animate-liquid-glow {
+  animation: liquidGlow 2s ease-in-out infinite;
+}
+
+/* Smooth Liquid Button Hover */
+.liquid-button {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.liquid-button:hover::before {
+  left: 100%;
+}
+
+.liquid-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.liquid-button:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+/* AI Content Expansion Animation */
+@keyframes liquidExpand {
+  0% { max-height: 0; opacity: 0; transform: scaleY(0.8); }
+  50% { opacity: 0.7; transform: scaleY(1.02); }
+  100% { max-height: 500px; opacity: 1; transform: scaleY(1); }
+}
+
+@keyframes liquidCollapse {
+  0% { max-height: 500px; opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0.7; transform: scaleY(0.98); }
+  100% { max-height: 0; opacity: 0; transform: scaleY(0.8); }
+}
+
+.animate-liquid-expand {
+  animation: liquidExpand 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  overflow: hidden;
+}
+
+.animate-liquid-collapse {
+  animation: liquidCollapse 0.6s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+  overflow: hidden;
+}
+
+/* Smooth Content Transition */
+.ai-content-transition {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* SPLASH SCREEN ANIMATIONS */
+ 
+/* 1. Elastic Entrance for Logo */
+@keyframes elasticPop {
+  0% { transform: scale(0); opacity: 0; filter: blur(20px); }
+  60% { transform: scale(1.1); opacity: 1; filter: blur(0px); }
+  80% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.animate-elastic-pop {
+  animation: elasticPop 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 2. Shimmer Effect across Logo */
+@keyframes shimmerSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmerSlide 3s infinite ease-in-out;
+}
+
+/* 3. Text Reveal */
+@keyframes fadeSlideUp {
+  0% { opacity: 0; transform: translateY(20px); filter: blur(4px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0px); }
+}
+
+.animate-text-reveal {
+  animation: fadeSlideUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0; /* Start hidden */
+}
+
+/* 4. Smooth Exit */
+@keyframes splashExitSmooth {
+  0% { opacity: 1; transform: scale(1); filter: blur(0px); }
+  100% { opacity: 0; transform: scale(1.1); filter: blur(20px); }
+}
+
+.animate-splash-exit-smooth {
+  animation: splashExitSmooth 0.8s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  pointer-events: none;
+}
+
+/* Utility for full height mobile */
+.h-safe-screen {
+  height: 100dvh;
+}
+
+
+/* Dynamic Theme Classes Overrides */
+.bg-theme { background-color: var(--bg-color); }
+.text-theme { color: var(--text-color); }
+.bg-glass { background-color: var(--glass-bg); }
+.border-glass { border-color: var(--glass-border); }
+ 
+/* Specific override for white/5 to work in light mode (make it dark/5) */
+.light-mode .bg-white\/5 { background-color: rgba(0,0,0,0.05) !important; }
+.light-mode .bg-white\/10 { background-color: rgba(0,0,0,0.08) !important; }
+.light-mode .bg-white\/20 { background-color: rgba(0,0,0,0.15) !important; }
+ 
+.light-mode .border-white\/5 { border-color: rgba(0,0,0,0.05) !important; }
+.light-mode .border-white\/10 { border-color: rgba(0,0,0,0.1) !important; }
+.light-mode .border-white\/20 { border-color: rgba(0,0,0,0.2) !important; }
+
+/* Invert text colors for light mode */
+.light-mode .text-white { color: #1a1a1a !important; }
+.light-mode .text-white\/90 { color: rgba(26,26,26,0.9) !important; }
+.light-mode .text-white\/80 { color: rgba(26,26,26,0.8) !important; }
+.light-mode .text-white\/70 { color: rgba(26,26,26,0.7) !important; }
+.light-mode .text-white\/60 { color: rgba(26,26,26,0.6) !important; }
+.light-mode .text-white\/50 { color: rgba(26,26,26,0.5) !important; }
+.light-mode .text-white\/40 { color: rgba(26,26,26,0.4) !important; }
+.light-mode .text-white\/30 { color: rgba(26,26,26,0.3) !important; }
+ 
+/* Invert backgrounds that are explicitly white/black in dark mode */
+.light-mode .bg-black { background-color: #ffffff !important; }
+.light-mode .bg-black\/90 { background-color: rgba(255,255,255,0.9) !important; }
+.light-mode .bg-black\/20 { background-color: rgba(255,255,255,0.5) !important; }
+.light-mode .bg-black\/40 { background-color: rgba(0,0,0,0.05) !important; }
+.light-mode .bg-black\/60 { background-color: rgba(255,255,255,0.6) !important; }
+ 
+/* Nav specific */
+.nav-bg-glass { background-color: var(--nav-bg); }
+
+/* Dynamic Island Liquid Animations */
+@keyframes dynamicIslandExpand {
+  0% {
+    transform: scale(1);
+    border-radius: 9999px;
+  }
+  50% {
+    transform: scale(1.05);
+    border-radius: 32px;
+  }
+  100% {
+    transform: scale(1.2);
+    border-radius: 32px;
+  }
+}
+
+@keyframes dynamicIslandCollapse {
+  0% {
+    transform: scale(1.2);
+    border-radius: 32px;
+  }
+  50% {
+    transform: scale(1.05);
+    border-radius: 32px;
+  }
+  100% {
+    transform: scale(1);
+    border-radius: 9999px;
+  }
+}
+
+.dynamic-island-expand {
+  animation: dynamicIslandExpand 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+.dynamic-island-collapse {
+  animation: dynamicIslandCollapse 0.6s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+}
+
+@keyframes liquidRipple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+}
+
+.animate-liquid-island-expand {
+  animation: liquidIslandExpand 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-liquid-island-collapse {
+  animation: liquidIslandCollapse 0.6s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+}
+
+.animate-liquid-ripple {
+  animation: liquidRipple 0.4s ease-out forwards;
+}
+
+/* Liquid morphing effect for dynamic island */
+.liquid-island {
+  transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, border-radius, clip-path;
+}
+
+.liquid-island:hover {
+  transform: scale(1.02);
+}
+
+.liquid-island:active {
+  transform: scale(0.98);
+  transition-duration: 0.1s;
+}
