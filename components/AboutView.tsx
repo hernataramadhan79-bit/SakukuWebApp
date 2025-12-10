@@ -122,7 +122,7 @@ export const AboutView: React.FC<AboutProps> = ({ language, theme, onBack }) => 
               </p>
             </div>
             <a
-              href="https://hernataportfolio.netlify.app/"
+              href="https://hrnt-portfolio.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all liquid-button ${
