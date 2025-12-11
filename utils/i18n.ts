@@ -45,9 +45,12 @@ const dictionary = {
     startPrompt: 'Tekan tombol + untuk mulai.',
     notFound: 'Tidak ada transaksi ditemukan.',
     exampleDesc: 'Contoh: Makan Siang',
+    incomeCategories: ['Gaji', 'Investasi', 'Hadiah', 'Pengembalian Dana', 'Lainnya'],
+    expenseCategories: ['Makanan', 'Transportasi', 'Tagihan', 'Hiburan', 'Kesehatan', 'Belanja', 'Pendidikan', 'Donasi', 'Lainnya'],
+    timeRange_1D: '1H',
     timeRange_7D: '7H',
     timeRange_1M: '1B',
-    timeRange_3M: '3B',
+    timeRange_1Y: '1T',
     timeRange_ALL: 'SEM',
     filterAll: 'Semua',
     // AI Section
@@ -146,9 +149,12 @@ const dictionary = {
     startPrompt: 'Press + button to start.',
     notFound: 'No transactions found.',
     exampleDesc: 'Example: Lunch',
+    incomeCategories: ['Salary', 'Investment', 'Gift', 'Refund', 'Others'],
+    expenseCategories: ['Food', 'Transportation', 'Bills', 'Entertainment', 'Health', 'Shopping', 'Education', 'Donation', 'Others'],
+    timeRange_1D: '1D',
     timeRange_7D: '7D',
     timeRange_1M: '1M',
-    timeRange_3M: '3M',
+    timeRange_1Y: '1Y',
     timeRange_ALL: 'ALL',
     filterAll: 'All',
     // AI Section
@@ -209,5 +215,14 @@ const dictionary = {
 export type TranslationKey = keyof typeof dictionary.id;
 
 export const t = (key: TranslationKey, lang: LanguageCode): string => {
+  const value = dictionary[lang][key] || dictionary['id'][key];
+  if (typeof value === 'string') {
+    return value;
+  }
+  return '';
+};
+
+export const getCategories = (type: 'income' | 'expense', lang: LanguageCode): string[] => {
+  const key = type === 'income' ? 'incomeCategories' : 'expenseCategories';
   return dictionary[lang][key] || dictionary['id'][key];
 };

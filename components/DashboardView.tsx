@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Transaction, TransactionType, CurrencyCode, LanguageCode, ThemeMode, TransactionFilter } from '../types';
-import { ArrowUpRight, ArrowDownRight, Plus, ChevronRight, TrendingUp, Wallet, Eye, EyeOff } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip, YAxis } from 'recharts';
+import { ArrowUpRight, ArrowDownRight, Plus, ChevronRight, TrendingUp, Wallet, Eye, EyeOff, X, Calendar } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer, Tooltip, YAxis, XAxis } from 'recharts';
 import { t } from '../utils/i18n';
 
 interface DashboardProps {
@@ -16,18 +16,35 @@ interface DashboardProps {
   getDisplayAmount: (transaction: Transaction) => number;
 }
 
-type TimeRange = '7D' | '1M' | '3M' | 'ALL';
 
 export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTransactionModal, onNavigateFilter, currency, language, theme, username, avatar, getDisplayAmount }) => {
-  const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
   const [showBalance, setShowBalance] = useState(true);
+  
+  // Dynamic Island States
+  const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
 
-  // Dynamic island animation is now handled purely with CSS classes and state
+  // Handle click outside to close header
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node) && isHeaderExpanded) {
+        setIsHeaderExpanded(false);
+      }
+    };
+
+    if (isHeaderExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isHeaderExpanded]);
 
   const { totalBalance, totalIncome, totalExpense, chartData } = useMemo(() => {
+    let chartPoints: { date: number; balance: number }[] = [];
     let globalIncome = 0;
     let globalExpense = 0;
-    
+
     const sorted = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     transactions.forEach(tx => {
@@ -37,52 +54,18 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
     });
 
     const currentBalance = globalIncome - globalExpense;
-
     const now = new Date();
-    let startDate: Date | null = null;
 
-    if (timeRange === '7D') {
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    } else if (timeRange === '1M') {
-      startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-    } else if (timeRange === '3M') {
-      startDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-    }
-
-    let chartPoints: { date: string, balance: number }[] = [];
-
-    if (startDate) {
-        let startBalance = 0;
-        const prePeriodTx = sorted.filter(tx => new Date(tx.date) < startDate!);
-        prePeriodTx.forEach(tx => {
-          const displayAmount = getDisplayAmount(tx);
-          startBalance += tx.type === TransactionType.INCOME ? displayAmount : -displayAmount;
-        });
-
-        chartPoints.push({ date: startDate.toISOString(), balance: startBalance });
-
-        let runningBalance = startBalance;
-        const inPeriodTx = sorted.filter(tx => new Date(tx.date) >= startDate!);
-        
-        inPeriodTx.forEach(tx => {
-          const displayAmount = getDisplayAmount(tx);
-          runningBalance += tx.type === TransactionType.INCOME ? displayAmount : -displayAmount;
-          chartPoints.push({ date: tx.date, balance: runningBalance });
-        });
-
-        chartPoints.push({ date: now.toISOString(), balance: runningBalance });
+    let runningBalance = 0;
+    if (sorted.length === 0) {
+        chartPoints.push({ date: now.getTime(), balance: 0 });
     } else {
-        let runningBalance = 0;
-        if (sorted.length === 0) {
-            chartPoints.push({ date: now.toISOString(), balance: 0 });
-        } else {
-            sorted.forEach(tx => {
-                const displayAmount = getDisplayAmount(tx);
-                runningBalance += tx.type === TransactionType.INCOME ? displayAmount : -displayAmount;
-                chartPoints.push({ date: tx.date, balance: runningBalance });
-            });
-            chartPoints.push({ date: now.toISOString(), balance: runningBalance });
-        }
+        sorted.forEach(tx => {
+            const displayAmount = getDisplayAmount(tx);
+            runningBalance += tx.type === TransactionType.INCOME ? displayAmount : -displayAmount;
+            chartPoints.push({ date: new Date(tx.date).getTime(), balance: runningBalance });
+        });
+        chartPoints.push({ date: now.getTime(), balance: runningBalance });
     }
 
     return {
@@ -91,38 +74,32 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
       totalExpense: globalExpense,
       chartData: chartPoints
     };
-  }, [transactions, timeRange]);
+  }, [transactions, getDisplayAmount]);
 
   const formatCurrency = (val: number, forceShow: boolean = false) => {
     if (!showBalance && !forceShow) return 'Rp.•••••••';
 
     if (currency === 'IDR') {
-      return 'Rp.' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(val);
+      return 'Rp.' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
     } else if (currency === 'USD') {
-      return '$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+      return '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
     } else if (currency === 'EUR') {
-      return '€' + new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+      return '€' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
     }
     return val.toString();
   };
   
   const formatValue = (val: number) => {
     if (currency === 'IDR') {
-      return 'Rp.' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(val);
+      return 'Rp.' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
     } else if (currency === 'USD') {
-      return '$' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+      return '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
     } else if (currency === 'EUR') {
-      return '€' + new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+      return '€' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
     }
     return val.toString();
   };
 
-  const RANGES = [
-    { key: '7D', label: t('timeRange_7D', language) },
-    { key: '1M', label: t('timeRange_1M', language) },
-    { key: '3M', label: t('timeRange_3M', language) },
-    { key: 'ALL', label: t('timeRange_ALL', language) },
-  ] as const;
 
   const isLight = theme === 'light';
 
@@ -145,83 +122,144 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
   return (
     <div className="h-full flex flex-col relative w-full">
       
-      {/* STATIC HEADER - Clean Compact Pill */}
-      <div className="absolute top-0 left-0 right-0 z-50 flex justify-center pt-4 px-3 sm:px-4 pointer-events-none">
-        <div className={`dynamic-island-button pointer-events-auto w-full max-w-[98%] sm:max-w-md rounded-full py-3 sm:py-3.5 backdrop-blur-3xl shadow-[0_15px_40px_rgba(0,0,0,0.15)] border ${
-          isLight
-            ? 'bg-gradient-to-b from-white/80 to-white/60 border-white/40 shadow-black/5 ring-1 ring-black/5'
-            : 'bg-gradient-to-b from-[#18181b]/80 to-[#121212]/70 border-white/20 ring-1 ring-white/10'
-        }`}>
-          <div className="flex items-center justify-between px-5 sm:px-6">
-            {/* Left: Brand Identity */}
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="relative">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xl overflow-hidden relative ${
-                  isLight
-                    ? 'bg-gradient-to-br from-white to-cyan-50 shadow-cyan-500/20'
-                    : 'bg-gradient-to-br from-[#18181b] to-black border border-white/10 shadow-cyan-500/20'
+      {/* HEADER BACKGROUND SHIELD (Backdrop for click outside) */}
+      <div 
+        className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-opacity duration-500 ${
+          isHeaderExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`} 
+      />
+
+      {/* DYNAMIC ISLAND HEADER */}
+      <div 
+        ref={headerRef}
+        className="absolute top-0 left-0 right-0 z-50 flex justify-center pt-3 px-3 pointer-events-none"
+      >
+        <div 
+          onClick={() => !isHeaderExpanded && setIsHeaderExpanded(true)}
+          className={`pointer-events-auto shadow-[0_25px_60px_rgba(0,0,0,0.15)] border backdrop-blur-3xl overflow-hidden cursor-pointer relative group
+            /* THE FLUID TRANSITION MAGIC */
+            transition-[width,height,border-radius,box-shadow,transform,background-color] duration-[700ms] ease-[cubic-bezier(0.32,0.72,0,1)]
+            ${isHeaderExpanded 
+              ? 'w-[92%] max-w-md h-[300px] rounded-[2.8rem] bg-opacity-100 shadow-[0_30px_80px_rgba(0,0,0,0.3)]' 
+              : 'w-[90%] max-w-[360px] h-[68px] rounded-[2.2rem] hover:scale-[1.02] active:scale-[0.98]'
+            }
+            ${isLight 
+              ? 'bg-white/95 border-white/40 ring-1 ring-black/5' 
+              : 'bg-[#18181b]/95 border-white/10 ring-1 ring-white/10'
+            }
+          `}
+        >
+            {/* CONTENT 1: PILL VIEW (Restored Original Layout) */}
+            <div className={`absolute inset-0 flex items-center justify-between px-6 gap-3 w-full h-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              isHeaderExpanded 
+                ? 'opacity-0 scale-90 blur-sm pointer-events-none' 
+                : 'opacity-100 scale-100 blur-0 delay-[50ms]'
+            }`}>
+              {/* Left: Brand Identity */}
+              <div className="flex items-center gap-3 shrink-0">
+                <div className={`w-10 h-10 rounded-[1rem] flex items-center justify-center shadow-sm shrink-0 overflow-hidden relative ${
+                  isLight 
+                    ? 'bg-gradient-to-br from-white to-cyan-50 shadow-cyan-500/10' 
+                    : 'bg-gradient-to-br from-[#18181b] to-black border border-white/10 shadow-cyan-500/10'
                 }`}>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent w-[200%] animate-shimmer rounded-xl opacity-60"></div>
-                  <Wallet size={20} strokeWidth={1.5} className={`relative z-10 ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`} />
+                   <Wallet 
+                    size={20} 
+                    strokeWidth={1.5}
+                    className={`relative z-10 ${isLight ? 'text-cyan-600' : 'text-cyan-400'}`} 
+                  />
                 </div>
+                <span className={`text-base font-bold tracking-tight ${isLight ? 'text-black' : 'text-white'}`}>Sakuku</span>
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className={`text-base font-black tracking-wide leading-none ${isLight ? 'text-black' : 'text-white'}`}>Sakuku</span>
+
+              {/* Right: Balance (Bigger & Clearer) */}
+              <div className="flex flex-col items-end mr-1 min-w-0 flex-1">
+                 <span className={`text-[10px] font-bold uppercase tracking-wider opacity-60 mb-0.5 leading-none ${isLight ? 'text-black' : 'text-white'}`}>
+                   {t('totalBalance', language)}
+                 </span>
+                 <span className={`font-black tracking-tight truncate w-full text-right leading-none ${
+                   isLight ? 'text-black' : 'text-white'
+                 } ${
+                   !showBalance ? 'blur-[3px] opacity-60' : ''
+                 } text-lg sm:text-xl`}>
+                   {showBalance ? formatCurrency(totalBalance, true) : '••••'}
+                 </span>
               </div>
             </div>
 
-            {/* Right: Compact Balance & Profile */}
-            <div className="flex items-center gap-3 flex-1 justify-end min-w-0">
-              <div className="flex flex-col items-end min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md tracking-wider ${
-                    isLight ? 'bg-black/5 text-black/60' : 'bg-white/10 text-white/60'
-                  }`}>
-                    {currency}
-                  </span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider hidden xs:inline ${isLight ? 'text-black/40' : 'text-white/40'}`}>
-                    {t('totalBalance', language)}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowBalance(!showBalance);
-                    }}
-                    className={`transition-colors active:scale-90 p-0.5 rounded ${isLight ? 'text-black/30 hover:text-black/60 hover:bg-black/5' : 'text-white/30 hover:text-white/60 hover:bg-white/5'}`}
-                  >
-                    {showBalance ? <Eye size={12} /> : <EyeOff size={12} />}
-                  </button>
-                </div>
-                <span className={`font-black tracking-tight truncate w-full text-right leading-none ${
-                  isLight ? 'text-black' : 'text-white'
-                } ${!showBalance ? 'blur-[2px] opacity-60' : ''} text-base sm:text-xl`}>
-                  {showBalance ? formatCurrency(totalBalance, true) : '••••••'}
-                </span>
-              </div>
-
-              <div className={`w-10 h-10 rounded-full border shadow-lg shrink-0 overflow-hidden ${isLight ? 'bg-gray-100 border-white' : 'bg-white/10 border-white/10'}`}>
-                {avatar ? (
-                  <img src={avatar} alt={username} className="w-full h-full object-cover" />
-                ) : (
-                  <div className={`w-full h-full flex items-center justify-center font-bold text-sm ${isLight ? 'bg-gradient-to-tr from-cyan-100 to-blue-200 text-cyan-800' : 'bg-gradient-to-tr from-cyan-900 to-blue-900 text-cyan-200'}`}>
-                    {username.charAt(0).toUpperCase()}
+            {/* CONTENT 2: EXPANDED VIEW (Card) */}
+            <div className={`absolute inset-0 w-full h-full flex flex-col gap-6 p-7 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              isHeaderExpanded 
+                ? 'opacity-100 scale-100 blur-0 translate-y-0 delay-100' 
+                : 'opacity-0 scale-90 blur-xl translate-y-4 pointer-events-none'
+            }`}>
+               {/* Top Row: User Info */}
+               <div className="flex justify-between items-start shrink-0">
+                  <div className="flex items-center gap-4">
+                     <div className={`w-14 h-14 rounded-2xl border-2 shadow-lg shrink-0 overflow-hidden relative ${isLight ? 'bg-gray-100 border-white' : 'bg-white/10 border-white/10'}`}>
+                       {avatar ? (
+                         <img src={avatar} alt={username} className="w-full h-full object-cover" />
+                       ) : (
+                         <div className={`w-full h-full flex items-center justify-center font-bold text-xl ${isLight ? 'bg-gradient-to-tr from-cyan-100 to-blue-200 text-cyan-800' : 'bg-gradient-to-tr from-cyan-900 to-blue-900 text-cyan-200'}`}>
+                           {username.charAt(0).toUpperCase()}
+                         </div>
+                       )}
+                     </div>
+                     <div>
+                        <p className={`text-xs font-bold uppercase tracking-wider opacity-60 ${isLight ? 'text-black' : 'text-white'}`}>{t('hello', language)}</p>
+                        <h2 className={`text-xl font-black tracking-tight leading-tight ${isLight ? 'text-black' : 'text-white'}`}>{username}</h2>
+                        {/* Replaced Member Premium with Date Info */}
+                        <div className={`flex items-center gap-1.5 mt-1 opacity-50 ${isLight ? 'text-black' : 'text-white'}`}>
+                          <Calendar size={10} className="fill-current" />
+                          <p className="text-[10px] font-medium tracking-wide">
+                            {new Date().toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </p>
+                        </div>
+                     </div>
                   </div>
-                )}
-              </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setIsHeaderExpanded(false); }}
+                    className={`p-2 rounded-full transition-colors ${isLight ? 'bg-black/5 hover:bg-black/10 text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                  >
+                     <X size={20} />
+                  </button>
+               </div>
+
+               {/* Middle: Big Balance - Centered nicely in the remaining space */}
+               <div className="flex flex-col items-center justify-center flex-1 -mt-2">
+                  <span className={`text-xs font-bold uppercase tracking-[0.2em] mb-3 opacity-50 ${isLight ? 'text-black' : 'text-white'}`}>{t('totalBalance', language)}</span>
+                  <div className="flex items-center gap-4">
+                     <h1 className={`text-5xl font-black tracking-tighter ${isLight ? 'text-black' : 'text-white'}`}>
+                        {showBalance ? formatCurrency(totalBalance, true) : '••••••••'}
+                     </h1>
+                  </div>
+                  
+                  {/* Currency Label & Toggle visibility in one row */}
+                  <div className="flex items-center gap-2 mt-4">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${isLight ? 'bg-black/5 border-black/5 text-black/60' : 'bg-white/5 border-white/5 text-white/60'}`}>
+                        {currency === 'IDR' ? 'INDONESIAN RUPIAH' : currency === 'USD' ? 'US DOLLAR' : 'EURO'}
+                      </span>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setShowBalance(!showBalance); }}
+                        className={`p-1 rounded-full transition-colors ${isLight ? 'text-black/40 hover:text-black/70' : 'text-white/40 hover:text-white/70'}`}
+                      >
+                        {showBalance ? <Eye size={16} /> : <EyeOff size={16} />}
+                      </button>
+                  </div>
+               </div>
             </div>
-          </div>
         </div>
       </div>
 
       {/* SCROLLABLE CONTENT */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar pb-36 px-6 pt-24 sm:pt-28">
+      {/* Adjusted top padding to accommodate taller header (pt-32) */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar pb-36 pt-32 px-6">
         <div className="space-y-6 max-w-5xl mx-auto">
           
           {/* ACTION COMMAND CENTER */}
           <div className="space-y-3">
             <button
               onClick={() => onOpenTransactionModal(TransactionType.EXPENSE)}
-              className={`w-full p-5 rounded-[2rem] flex items-center justify-between p-5 liquid-hover shadow-xl transition-all duration-300 group relative overflow-hidden ${
+              className={`w-full py-5 rounded-[2rem] flex items-center justify-between px-6 liquid-hover shadow-xl transition-all duration-300 group relative overflow-hidden ${
                 isLight
                   ? 'bg-black text-white hover:bg-neutral-900 shadow-black/20'
                   : 'bg-white text-black hover:bg-neutral-100 shadow-white/10'
@@ -241,7 +279,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
             </button>
 
             <div className="grid grid-cols-2 gap-3">
-              <button
+              <button 
                 onClick={() => onNavigateFilter('income')}
                 className={`group relative flex flex-col justify-between p-5 rounded-[2rem] border liquid-hover overflow-hidden transition-all duration-300 cursor-pointer min-h-[140px] ${incomeBtnClass}`}
               >
@@ -262,7 +300,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                 </div>
               </button>
 
-              <button
+              <button 
                 onClick={() => onNavigateFilter('expense')}
                 className={`group relative flex flex-col justify-between p-5 rounded-[2rem] border liquid-hover overflow-hidden transition-all duration-300 cursor-pointer min-h-[140px] ${expenseBtnClass}`}
               >
@@ -294,34 +332,15 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                 </div>
                 <h3 className={`text-sm font-bold ${isLight ? 'text-black/80' : 'text-white/90'}`}>{t('financialTrend', language)}</h3>
               </div>
-              
-              <div className={`flex rounded-full p-1 gap-1 ${isLight ? 'bg-black/5' : 'bg-white/10'}`}>
-                {RANGES.map((r) => (
-                  <button
-                    key={r.key}
-                    onClick={() => setTimeRange(r.key as TimeRange)}
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all duration-300 ${
-                      timeRange === r.key 
-                        ? isLight 
-                            ? 'bg-white text-black shadow-sm' 
-                            : 'bg-white text-black shadow-md'
-                        : isLight
-                            ? 'text-black/40 hover:text-black hover:bg-black/5'
-                            : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* FULL BLEED CHART CONTAINER - FIXED FOR RECHARTS CRASH */}
             {/* Using absolute positioning inside a relative container forces the chart to take exact dimensions immediately */}
-            <div className="w-[calc(100%+3rem)] -mx-6 h-40 sm:h-48 mt-4 relative z-0" style={{ minHeight: '192px' }}>
+            <div className="w-[calc(100%+3rem)] -mx-6 h-40 sm:h-48 mt-4 relative z-0">
                <div className="absolute inset-0">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={192} debounce={100}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <XAxis type="number" dataKey="date" domain={['dataMin', 'dataMax']} hide />
                       <defs>
                         <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor={isLight ? "#0891b2" : "#22d3ee"} stopOpacity={0.4}/>
@@ -345,14 +364,14 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                         labelStyle={{ display: 'none' }}
                         formatter={(value: number) => [formatValue(value), 'Saldo']}
                       />
-                      <Area
-                        type="monotone"
-                        dataKey="balance"
-                        stroke={isLight ? "#0891b2" : "#22d3ee"}
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#colorBalance)"
-                        animationDuration={800}
+                      <Area 
+                        type="monotone" 
+                        dataKey="balance" 
+                        stroke={isLight ? "#0891b2" : "#22d3ee"} 
+                        strokeWidth={3} 
+                        fillOpacity={1} 
+                        fill="url(#colorBalance)" 
+                        animationDuration={1500}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -387,7 +406,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                       ? isLight ? 'text-emerald-600' : 'text-emerald-400' 
                       : isLight ? 'text-black' : 'text-white'
                   }`}>
-                    {showBalance
+                    {showBalance 
                       ? (tx.type === TransactionType.INCOME ? '+' : '') + formatValue(getDisplayAmount(tx))
                       : '••••••'}
                   </span>
@@ -402,7 +421,6 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
           </div>
         </div>
       </div>
-
     </div>
   );
 };

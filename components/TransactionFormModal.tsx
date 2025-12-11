@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Transaction, TransactionType, LanguageCode, ThemeMode, CurrencyCode } from '../types';
 import { X, Check, DollarSign, AlignLeft, Grid } from 'lucide-react';
-import { t } from '../utils/i18n';
+import { t, getCategories } from '../utils/i18n';
 
 interface TransactionFormModalProps {
   isOpen: boolean;
@@ -12,8 +12,22 @@ interface TransactionFormModalProps {
   theme: ThemeMode;
 }
 
-const INCOME_CATEGORIES = ['Gaji', 'Investasi', 'Hadiah', 'Pengembalian Dana', 'Lainnya'];
-const EXPENSE_CATEGORIES = ['Makanan', 'Transportasi', 'Tagihan', 'Hiburan', 'Kesehatan', 'Belanja', 'Pendidikan', 'Donasi', 'Lainnya'];
+
+// Format number with thousand separators based on currency
+const formatNumberWithSeparators = (value: string, curr: CurrencyCode): string => {
+  // Remove existing separators first
+  const cleanValue = value.replace(/[.,]/g, '');
+  if (!cleanValue || cleanValue === '0') return '';
+
+  // For currencies that use comma as decimal separator (USD, EUR)
+  if (curr === 'USD' || curr === 'EUR') {
+    // Format with comma as thousand separator
+    return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  } else {
+    // For IDR and others, use dot as thousand separator
+    return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+};
 
 export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({ isOpen, onClose, onSubmit, initialType = TransactionType.EXPENSE, language, theme }) => {
   // Load saved data from localStorage
@@ -39,15 +53,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({ isOp
 
   // Format initial amount properly
   const getInitialAmount = () => {
-    const savedAmount = savedData?.amount || '';
-    if (savedAmount) {
-      const cleanAmount = savedAmount.replace(/\./g, '');
-      const numericValue = parseInt(cleanAmount, 10);
-      if (!isNaN(numericValue)) {
-        return numericValue.toLocaleString('id-ID');
-      }
-    }
-    return '';
+    return savedData?.amount || '';
   };
 
   const [amount, setAmount] = useState(getInitialAmount());
@@ -57,12 +63,12 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({ isOp
 
   // Derive currentCategories based on type
   const currentCategories = useMemo(() => {
-    return type === TransactionType.INCOME ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
-  }, [type]);
+    return getCategories(type === TransactionType.INCOME ? 'income' : 'expense', language);
+  }, [type, language]);
 
   const [category, setCategory] = useState(() => {
     const savedType = savedData?.type || initialType;
-    const categories = savedType === TransactionType.INCOME ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+    const categories = getCategories(savedType === TransactionType.INCOME ? 'income' : 'expense', language);
     return savedData?.category && categories.includes(savedData.category) ? savedData.category : categories[0];
   });
 
@@ -82,19 +88,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({ isOp
       // Load saved data when modal opens
       const savedData = loadSavedData();
       if (savedData) {
-        // Format saved amount properly
-        const savedAmount = savedData.amount || '';
-        if (savedAmount) {
-          const cleanAmount = savedAmount.replace(/\./g, '');
-          const numericValue = parseInt(cleanAmount, 10);
-          if (!isNaN(numericValue)) {
-            setAmount(numericValue.toLocaleString('id-ID'));
-          } else {
-            setAmount(savedAmount);
-          }
-        } else {
-          setAmount('');
-        }
+        setAmount(savedData.amount || '');
         setDescription(savedData.description || '');
         setType(savedData.type || initialType);
         // Category will be set by the next useEffect
@@ -131,6 +125,15 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({ isOp
     }
   }, [type, currentCategories, isOpen]);
 
+  // Re-format amount when currency changes
+  useEffect(() => {
+    if (amount) {
+      const cleanAmount = amount.replace(/[.,]/g, '');
+      const formattedAmount = formatNumberWithSeparators(cleanAmount, currency);
+      setAmount(formattedAmount);
+    }
+  }, [currency]);
+
   // Auto-save form data (debounced)
   useEffect(() => {
     if (isOpen) {
@@ -142,33 +145,18 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({ isOp
   }, [amount, description, category, type, isOpen]);
 
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Clear error when user starts typing
-    if (amountError) setAmountError('');
 
-    // Get raw input value
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (amountError) setAmountError('');
     const inputValue = e.target.value;
 
-    // Remove all non-digit characters
-    const digitsOnly = inputValue.replace(/\D/g, '');
+    // Allow only numbers
+    const numericValue = inputValue.replace(/[^0-9]/g, '');
 
-    if (!digitsOnly) {
-      setAmount('');
-      return;
-    }
+    // Format with separators
+    const formattedValue = formatNumberWithSeparators(numericValue, currency);
 
-    // Convert to number to remove leading zeros
-    const numericValue = parseInt(digitsOnly, 10);
-
-    if (isNaN(numericValue)) {
-      setAmount('');
-      return;
-    }
-
-    // Format with Indonesian thousand separator (dots)
-    const formatted = numericValue.toLocaleString('id-ID');
-
-    setAmount(formatted);
+    setAmount(formattedValue);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -183,12 +171,12 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({ isOp
       return;
     }
 
-    // Parse amount - handle Indonesian number format (dots as thousand separators)
+    // Parse amount - remove separators first
     let numericAmount: number;
 
     try {
-      // Remove thousand separators (dots) for Indonesian locale
-      const cleanAmount = amount.replace(/\./g, '');
+      // Remove thousand separators (dots or commas depending on currency)
+      const cleanAmount = amount.replace(/[.,]/g, '');
       numericAmount = parseFloat(cleanAmount);
 
       if (isNaN(numericAmount) || numericAmount <= 0) {

@@ -12,6 +12,7 @@ import { SplashScreen } from './components/SplashScreen'; // Import new componen
 import { UpdateNotification } from './components/UpdateNotification';
 import { AppView, Transaction, TransactionType, AppSettings, CurrencyCode, TransactionFilter } from './types';
 import { getTransactions, saveTransaction, deleteTransaction, clearAllTransactions, getSettings, saveSettings, overrideTransactions } from './services/storage';
+import { getLatestRates } from './services/currency';
 import { t } from './utils/i18n';
 
 // Defined outside component to avoid useEffect dependency issues
@@ -28,6 +29,8 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<AppSettings>(getSettings());
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number> | null>(null);
+  const [isLoadingRates, setIsLoadingRates] = useState(true);
 
   // Wallet Filter State (Lifted Up)
   const [walletFilter, setWalletFilter] = useState<TransactionFilter>('all');
@@ -36,16 +39,16 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalDefaultType, setModalDefaultType] = useState<TransactionType>(TransactionType.EXPENSE);
 
-  // Update Notification State
-  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
-
-  // Confirmation State
+  // Confirm Modal State
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
-    type: 'single' | 'all' | 'bulk' | null;
+    type: 'single' | 'bulk' | 'all' | null;
     id: string | null;
-    ids?: string[]; // For bulk deletion
+    ids?: string[];
   }>({ isOpen: false, type: null, id: null });
+
+  // Update Notification State
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
   useEffect(() => {
     // Load initial data
@@ -55,7 +58,18 @@ export default function App() {
     applyTheme(savedSettings.theme);
   }, []);
 
-  // Service Worker Update Detection
+  useEffect(() => {
+    const fetchRates = async () => {
+      if (settings.currency) {
+        setIsLoadingRates(true);
+        const rates = await getLatestRates(settings.currency);
+        setExchangeRates(rates);
+        setIsLoadingRates(false);
+      }
+    };
+    fetchRates();
+  }, [settings.currency]);
+
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then((registration) => {
@@ -75,24 +89,29 @@ export default function App() {
   }, []);
 
   const convertAmount = (amount: number, from: CurrencyCode, to: CurrencyCode): number => {
-    if (from === to) return amount;
+    if (from === to || !exchangeRates || isLoadingRates) {
+      return from === to ? amount : 0; // Return 0 if rates are loading and conversion is needed
+    }
 
-    // Rates relative to IDR (Base) - Using precise decimal values without rounding
-    const rates: Record<CurrencyCode, number> = {
-      IDR: 1.0,
-      USD: 15500.0, // 1 USD = 15500.0 IDR (precise, no rounding)
-      EUR: 16800.0  // 1 EUR = 16800.0 IDR (precise, no rounding)
-    };
+    // The base currency of our fetched rates is settings.currency.
+    // All rates are relative to that base.
+    const fromRate = exchangeRates[from]; // Rate of 'from' currency relative to base
+    const toRate = exchangeRates[to];     // Rate of 'to' currency relative to base
 
-    // Convert 'from' to IDR with full precision (no intermediate rounding)
-    const amountInIDR = amount * rates[from];
+    if (fromRate && toRate) {
+      // To convert from currency A to currency B when all rates are relative to C:
+      // 1. Convert amount from A to C: amountInA / rate_A_to_C
+      // 2. Convert amount from C to B: amountInC * rate_B_to_C
+      // Since our rates are from C (base) to other currencies, the formula is:
+      // (amount / fromRate) * toRate
+      const amountInBase = amount / fromRate;
+      const finalAmount = amountInBase * toRate;
+      return finalAmount;
+    }
 
-    // Convert IDR to 'to' with full precision (no rounding)
-    const result = amountInIDR / rates[to];
-
-    // Return result with high precision (4 decimal places) to preserve cents/cent precision
-    // Using toFixed to avoid floating point precision issues
-    return parseFloat(result.toFixed(4));
+    // Fallback if rates aren't available for some reason
+    console.warn(`Exchange rates not found for conversion from ${from} to ${to}. Rates loading: ${isLoadingRates}. Using original amount.`);
+    return amount;
   };
 
   // Get transaction amount converted to display currency

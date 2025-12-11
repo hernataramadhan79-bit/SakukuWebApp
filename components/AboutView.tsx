@@ -61,7 +61,7 @@ export const AboutView: React.FC<AboutProps> = ({ language, theme, onBack }) => 
                 Sakuku
               </h2>
               <p className={`text-lg ${isLight ? 'text-black/60' : 'text-white/60'}`}>
-                v1.0
+                v1.2
               </p>
             </div>
             <p className={`text-base leading-relaxed max-w-2xl mx-auto ${isLight ? 'text-black/70' : 'text-white/70'}`}>
