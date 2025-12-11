@@ -75,7 +75,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache first strategy for static assets
+  // Network-first strategy for navigation requests (e.g., index.html)
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(async (response) => {
+          const cache = await caches.open(DYNAMIC_CACHE);
+          await cache.put(request, response.clone());
+          return response;
+        })
+        .catch(async () => {
+          const cache = await caches.open(DYNAMIC_CACHE);
+          return (await cache.match(request)) || (await cache.match('/index.html'));
+        })
+    );
+    return;
+  }
+
+  // Cache first strategy for other static assets
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
@@ -98,10 +115,8 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch(() => {
-            // Return offline fallback for navigation requests
-            if (request.mode === 'navigate') {
-              return caches.match('/index.html');
-            }
+            // Return offline fallback for any other requests if network fails
+            return caches.match(request); // Or a generic offline page
           });
       })
   );
