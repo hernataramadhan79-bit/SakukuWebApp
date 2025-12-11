@@ -335,7 +335,7 @@ export default function App() {
         />
       )}
 
-      <Layout currentView={currentView} onChangeView={setCurrentView} isModalOpen={isModalOpen} language={settings.language} theme={settings.theme}>
+      <Layout currentView={currentView} onChangeView={setCurrentView} isModalOpen={isModalOpen || currentView === AppView.ABOUT || confirmState.isOpen} language={settings.language} theme={settings.theme}>
         <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
           {renderView()}
         </Suspense>
