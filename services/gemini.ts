@@ -37,12 +37,18 @@ export const generateSpendingInsight = async (
 
     Data: ${summary}
 
-    Provide ultra-concise analysis in 3 lines max:
-    • Status: [Safe/Warning/Critical] + 1-sentence assessment
-    • Top spending: [Main expense category] + brief insight
-    • Tip: [One actionable saving suggestion]
+    Output Format (Markdown):
+    
+    ### 📊 Status Keuangan
+    [Status: Aman/Waspada/Kritis] - [Ringkasan 1 kalimat tentang kondisi saat ini]
 
-    Keep total response under 100 words. Use bullet points only.
+    ### 📉 Pola Pengeluaran
+    [Analisis singkat mengenai kategori pengeluaran terbesar atau tren yang mencolok]
+
+    ### 💡 Saran Cerdas
+    [1-2 saran praktis dan dapat ditindaklanjuti untuk berhemat]
+
+    Keep the tone encouraging, professional, and futuristic. Use bold text for emphasis.
   `;
 
   try {

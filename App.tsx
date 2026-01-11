@@ -14,6 +14,7 @@ import { AppView, Transaction, TransactionType, AppSettings, CurrencyCode, Trans
 import { getTransactions, saveTransaction, deleteTransaction, clearAllTransactions, getSettings, saveSettings, overrideTransactions } from './services/storage';
 import { getLatestRates } from './services/currency';
 import { t } from './utils/i18n';
+import { PrivacyProvider } from './components/PrivacyContext';
 
 // Defined outside component to avoid useEffect dependency issues
 const applyTheme = (theme: 'dark' | 'light') => {
@@ -318,48 +319,94 @@ export default function App() {
     }
   };
 
-  const modalContent = getModalContent();
+    const modalContent = getModalContent();
 
-  return (
-    <>
-      {/* Splash Screen - conditionally rendered on top */}
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} theme={settings.theme} />}
+  
 
-      {/* Custom Update Notification */}
-      {showUpdateNotification && (
-        <UpdateNotification
-          onUpdate={handleUpdateApp}
-          onDismiss={handleDismissUpdate}
-          language={settings.language}
-          theme={settings.theme}
-        />
-      )}
+    return (
 
-      <Layout currentView={currentView} onChangeView={setCurrentView} isModalOpen={isModalOpen || currentView === AppView.ABOUT || confirmState.isOpen} language={settings.language} theme={settings.theme}>
-        <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
-          {renderView()}
-        </Suspense>
+      <PrivacyProvider>
 
-        <TransactionFormModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={handleAddTransaction}
-          initialType={modalDefaultType}
-          language={settings.language}
-          theme={settings.theme}
-        />
+        {/* Splash Screen - conditionally rendered on top */}
 
-        <ConfirmModal
-          isOpen={confirmState.isOpen}
-          title={modalContent.title}
-          message={modalContent.message}
-          onConfirm={handleConfirmAction}
-          onCancel={handleCancelAction}
-          language={settings.language}
-        />
+        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} theme={settings.theme} />}
 
-        <InstallPrompt language={settings.language} theme={settings.theme} />
-      </Layout>
-    </>
-  );
-}
+  
+
+        {/* Custom Update Notification */}
+
+        {showUpdateNotification && (
+
+          <UpdateNotification
+
+            onUpdate={handleUpdateApp}
+
+            onDismiss={handleDismissUpdate}
+
+            language={settings.language}
+
+            theme={settings.theme}
+
+          />
+
+        )}
+
+  
+
+        <Layout currentView={currentView} onChangeView={setCurrentView} isModalOpen={isModalOpen || currentView === AppView.ABOUT || confirmState.isOpen} language={settings.language} theme={settings.theme}>
+
+          <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>}>
+
+            {renderView()}
+
+          </Suspense>
+
+  
+
+          <TransactionFormModal
+
+            isOpen={isModalOpen}
+
+            onClose={() => setIsModalOpen(false)}
+
+            onSubmit={handleAddTransaction}
+
+            initialType={modalDefaultType}
+
+            language={settings.language}
+
+            theme={settings.theme}
+
+          />
+
+  
+
+          <ConfirmModal
+
+            isOpen={confirmState.isOpen}
+
+            title={modalContent.title}
+
+            message={modalContent.message}
+
+            onConfirm={handleConfirmAction}
+
+            onCancel={handleCancelAction}
+
+            language={settings.language}
+
+          />
+
+  
+
+          <InstallPrompt language={settings.language} theme={settings.theme} />
+
+        </Layout>
+
+      </PrivacyProvider>
+
+    );
+
+  }
+
+  

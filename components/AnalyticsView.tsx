@@ -6,6 +6,7 @@ import { generateSpendingInsight } from '../services/gemini';
 import { t } from '../utils/i18n';
 import ReactMarkdown from 'react-markdown';
 import { Suspense, lazy } from 'react';
+import { usePrivacy } from './PrivacyContext';
 
 // Lazy load ReactMarkdown for better performance
 const LazyReactMarkdown = lazy(() => import('react-markdown'));
@@ -21,6 +22,7 @@ interface AnalyticsProps {
 const COLORS = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e', '#f97316', '#eab308', '#84cc16'];
 
 export const AnalyticsView: React.FC<AnalyticsProps> = ({ transactions, currency, language, theme, getDisplayAmount }) => {
+  const { isPrivacyMode } = usePrivacy();
   const [insight, setInsight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [savedInsights, setSavedInsights] = useState<string[]>([]);
@@ -119,6 +121,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({ transactions, currency
   };
 
   const formatCurrency = (val: number) => {
+    if (isPrivacyMode) return '••••••';
     if (currency === 'IDR') {
       return 'Rp.' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(val);
     } else if (currency === 'USD') {
@@ -383,7 +386,7 @@ export const AnalyticsView: React.FC<AnalyticsProps> = ({ transactions, currency
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fill: axisColor, fontSize: 10 }}
-                    tickFormatter={(value) => `${value / 1000}k`}
+                    tickFormatter={(value) => isPrivacyMode ? '•••' : `${value / 1000}k`}
                   />
                   <Tooltip
                     cursor={{fill: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'}} 

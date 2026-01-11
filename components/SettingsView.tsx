@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { Moon, Sun, Globe, DollarSign, ChevronRight, RefreshCw, User, Camera, Upload, Info, Download } from 'lucide-react';
+import { Moon, Sun, Globe, DollarSign, ChevronRight, RefreshCw, User, Camera, Upload, Info, Download, EyeOff } from 'lucide-react';
 import { AppSettings, CurrencyCode, LanguageCode, ThemeMode } from '../types';
+import { usePrivacy } from './PrivacyContext';
 import { t } from '../utils/i18n';
 
 interface SettingsProps {
@@ -11,6 +12,7 @@ interface SettingsProps {
 }
 
 export const SettingsView: React.FC<SettingsProps> = ({ settings, onUpdateSettings, onClearAllData, onNavigateToAbout }) => {
+   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
    const lang = settings.language;
    const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -267,7 +269,7 @@ export const SettingsView: React.FC<SettingsProps> = ({ settings, onUpdateSettin
                   onClick={handleThemeToggle}
                   className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 relative ${settings.theme === 'dark' ? 'bg-purple-600' : 'bg-yellow-400'}`}
                 >
-                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${settings.theme === 'dark' ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${settings.theme === 'dark' ? 'translate-x-5' : 'translate-x-0'}`}></div>
                 </button>
               }
             />
@@ -319,6 +321,18 @@ export const SettingsView: React.FC<SettingsProps> = ({ settings, onUpdateSettin
         <div>
           <SectionTitle>{t('dataPrivacy', lang)}</SectionTitle>
           <div className="flex flex-col gap-[1px] rounded-2xl overflow-hidden bg-white/5">
+             <SettingCard
+               icon={<EyeOff size={16}/>}
+               label={isPrivacyMode ? t('showBalance', lang) : t('hideBalance', lang)}
+               action={
+                <button
+                  onClick={togglePrivacyMode}
+                  className={`w-12 h-7 rounded-full p-1 transition-colors duration-300 relative ${isPrivacyMode ? 'bg-purple-600' : 'bg-gray-500'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${isPrivacyMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                </button>
+               }
+             />
              <SettingCard
                icon={<RefreshCw size={16}/>}
                label={t('resetAll', lang)}

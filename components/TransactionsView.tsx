@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Transaction, TransactionType, CurrencyCode, LanguageCode, ThemeMode, TransactionFilter } from '../types';
 import { Plus, Search, Trash2, AlertCircle, CheckCircle2, Circle, X, CheckSquare } from 'lucide-react';
+import { usePrivacy } from './PrivacyContext';
 import { t } from '../utils/i18n';
 
 interface TransactionsProps {
@@ -33,6 +34,7 @@ export const TransactionsView: React.FC<TransactionsProps> = ({
   const [searchText, setSearchText] = useState('');
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { isPrivacyMode } = usePrivacy();
   
   // Advanced filtering logic
   const filteredTransactions = transactions.filter(tx => {
@@ -51,6 +53,7 @@ export const TransactionsView: React.FC<TransactionsProps> = ({
   });
 
   const formatCurrency = (val: number) => {
+    if (isPrivacyMode) return '••••••';
     if (currency === 'IDR') {
       return 'Rp.' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(val);
     } else if (currency === 'USD') {
@@ -262,7 +265,7 @@ export const TransactionsView: React.FC<TransactionsProps> = ({
                      ? isLight ? 'text-green-600' : 'text-green-400'
                      : isLight ? 'text-red-600' : 'text-white'
                  }`}>
-                  {tx.type === TransactionType.INCOME ? '+' : '-'}{formatCurrency(getDisplayAmount(tx))}
+                  {!isPrivacyMode && (tx.type === TransactionType.INCOME ? '+' : '-')}{formatCurrency(getDisplayAmount(tx))}
                 </span>
               </div>
             </div>

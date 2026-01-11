@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Transaction, TransactionType, CurrencyCode, LanguageCode, ThemeMode, TransactionFilter } from '../types';
 import { ArrowUpRight, ArrowDownRight, Plus, ChevronRight, TrendingUp, Wallet, Eye, EyeOff, X, Calendar } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, YAxis, XAxis } from 'recharts';
+import { usePrivacy } from './PrivacyContext';
 import { t } from '../utils/i18n';
 
 interface DashboardProps {
@@ -18,7 +19,7 @@ interface DashboardProps {
 
 
 export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTransactionModal, onNavigateFilter, currency, language, theme, username, avatar, getDisplayAmount }) => {
-  const [showBalance, setShowBalance] = useState(true);
+  const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
   
   // Dynamic Island States
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
@@ -76,20 +77,9 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
     };
   }, [transactions, getDisplayAmount]);
 
-  const formatCurrency = (val: number, forceShow: boolean = false) => {
-    if (!showBalance && !forceShow) return 'Rp.•••••••';
+  const formatCurrency = (val: number) => {
+    if (isPrivacyMode) return 'Rp. •••••••';
 
-    if (currency === 'IDR') {
-      return 'Rp.' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
-    } else if (currency === 'USD') {
-      return '$' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
-    } else if (currency === 'EUR') {
-      return '€' + new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
-    }
-    return val.toString();
-  };
-  
-  const formatValue = (val: number) => {
     if (currency === 'IDR') {
       return 'Rp.' + new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(val);
     } else if (currency === 'USD') {
@@ -123,34 +113,35 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
     <div className="h-full flex flex-col relative w-full">
       
       {/* HEADER BACKGROUND SHIELD (Backdrop for click outside) */}
-      <div 
-        className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-opacity duration-500 ${
+      <div
+        className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-[opacity,backdrop-filter] duration-500 cubic-bezier(0.34, 1.56, 0.64, 1) ${
           isHeaderExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`} 
+        }`}
       />
 
       {/* DYNAMIC ISLAND HEADER */}
-      <div 
+      <div
         ref={headerRef}
-        className="absolute top-0 left-0 right-0 z-50 flex justify-center pt-3 px-3 pointer-events-none"
+        className="absolute top-0 left-0 right-0 z-50 pt-3 px-6 pointer-events-none"
       >
-        <div 
+        <div
           onClick={() => !isHeaderExpanded && setIsHeaderExpanded(true)}
-          className={`pointer-events-auto shadow-[0_25px_60px_rgba(0,0,0,0.15)] border backdrop-blur-3xl overflow-hidden cursor-pointer relative group
-            /* THE FLUID TRANSITION MAGIC */
-            transition-[width,height,border-radius,box-shadow,transform,background-color] duration-[700ms] ease-[cubic-bezier(0.32,0.72,0,1)]
-            ${isHeaderExpanded 
-              ? 'w-[92%] max-w-md h-[300px] rounded-[2.8rem] bg-opacity-100 shadow-[0_30px_80px_rgba(0,0,0,0.3)]' 
-              : 'w-[90%] max-w-[360px] h-[68px] rounded-[2.2rem] hover:scale-[1.02] active:scale-[0.98]'
+          className={`pointer-events-auto shadow-[0_25px_60px_rgba(0,0,0,0.15)] border overflow-hidden cursor-pointer relative group w-full max-w-5xl mx-auto
+            /* THE FLUID TRANSITION MAGIC - Enhanced for smoother animation */
+            transition-[height] duration-500 cubic-bezier(0.34, 1.56, 0.64, 1)
+            will-change-[height]
+            ${isHeaderExpanded
+              ? 'h-[300px] rounded-[2.8rem] bg-opacity-100 shadow-[0_30px_80px_rgba(0,0,0,0.3)]'
+              : 'h-[68px] rounded-[2.2rem]'
             }
-            ${isLight 
-              ? 'bg-white/95 border-white/40 ring-1 ring-black/5' 
+            ${isLight
+              ? 'bg-white/95 border-white/40 ring-1 ring-black/5'
               : 'bg-[#18181b]/95 border-white/10 ring-1 ring-white/10'
             }
           `}
         >
             {/* CONTENT 1: PILL VIEW (Restored Original Layout) */}
-            <div className={`absolute inset-0 flex items-center justify-between px-6 gap-3 w-full h-full transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            <div className={`absolute inset-0 flex items-center justify-between px-6 gap-3 w-full h-full transition-all duration-500 ease-in-out ${
               isHeaderExpanded 
                 ? 'opacity-0 scale-90 blur-sm pointer-events-none' 
                 : 'opacity-100 scale-100 blur-0 delay-[50ms]'
@@ -179,15 +170,15 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                  <span className={`font-black tracking-tight truncate w-full text-right leading-none ${
                    isLight ? 'text-black' : 'text-white'
                  } ${
-                   !showBalance ? 'blur-[3px] opacity-60' : ''
+                   isPrivacyMode ? 'blur-[3px] opacity-60' : ''
                  } text-lg sm:text-xl`}>
-                   {showBalance ? formatCurrency(totalBalance, true) : '••••'}
+                   {formatCurrency(totalBalance)}
                  </span>
               </div>
             </div>
 
             {/* CONTENT 2: EXPANDED VIEW (Card) */}
-            <div className={`absolute inset-0 w-full h-full flex flex-col gap-6 p-7 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            <div className={`absolute inset-0 w-full h-full flex flex-col gap-6 p-7 transition-all duration-500 ease-in-out ${
               isHeaderExpanded 
                 ? 'opacity-100 scale-100 blur-0 translate-y-0 delay-100' 
                 : 'opacity-0 scale-90 blur-xl translate-y-4 pointer-events-none'
@@ -228,8 +219,8 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                <div className="flex flex-col items-center justify-center flex-1 -mt-2">
                   <span className={`text-xs font-bold uppercase tracking-[0.2em] mb-3 opacity-50 ${isLight ? 'text-black' : 'text-white'}`}>{t('totalBalance', language)}</span>
                   <div className="flex items-center gap-4">
-                     <h1 className={`text-5xl font-black tracking-tighter ${isLight ? 'text-black' : 'text-white'}`}>
-                        {showBalance ? formatCurrency(totalBalance, true) : '••••••••'}
+                     <h1 className={`text-4xl font-black tracking-tighter ${isLight ? 'text-black' : 'text-white'}`}>
+                        {formatCurrency(totalBalance)}
                      </h1>
                   </div>
                   
@@ -239,10 +230,10 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                         {currency === 'IDR' ? 'INDONESIAN RUPIAH' : currency === 'USD' ? 'US DOLLAR' : 'EURO'}
                       </span>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); setShowBalance(!showBalance); }}
+                        onClick={(e) => { e.stopPropagation(); togglePrivacyMode(); }}
                         className={`p-1 rounded-full transition-colors ${isLight ? 'text-black/40 hover:text-black/70' : 'text-white/40 hover:text-white/70'}`}
                       >
-                        {showBalance ? <Eye size={16} /> : <EyeOff size={16} />}
+                        {!isPrivacyMode ? <Eye size={16} /> : <EyeOff size={16} />}
                       </button>
                   </div>
                </div>
@@ -295,7 +286,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                 <div className="flex flex-col items-start gap-1 mt-4">
                   <span className={`text-xs font-semibold uppercase tracking-wide ${incomeSubTextClass}`}>{t('income', language)}</span>
                   <span className={`text-xl font-bold truncate w-full text-left ${incomeTextClass}`}>
-                    {showBalance ? formatValue(totalIncome) : '••••••'}
+                    {formatCurrency(totalIncome)}
                   </span>
                 </div>
               </button>
@@ -316,7 +307,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                 <div className="flex flex-col items-start gap-1 mt-4">
                   <span className={`text-xs font-semibold uppercase tracking-wide ${expenseSubTextClass}`}>{t('expense', language)}</span>
                   <span className={`text-xl font-bold truncate w-full text-left ${expenseTextClass}`}>
-                     {showBalance ? formatValue(totalExpense) : '••••••'}
+                     {formatCurrency(totalExpense)}
                   </span>
                 </div>
               </button>
@@ -362,7 +353,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                         }}
                         itemStyle={{ color: isLight ? '#0891b2' : '#22d3ee', fontWeight: 600 }}
                         labelStyle={{ display: 'none' }}
-                        formatter={(value: number) => [formatValue(value), 'Saldo']}
+                        formatter={(value: number) => [formatCurrency(value), 'Saldo']}
                       />
                       <Area 
                         type="monotone" 
@@ -406,9 +397,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ transactions, onOpenTr
                       ? isLight ? 'text-emerald-600' : 'text-emerald-400' 
                       : isLight ? 'text-black' : 'text-white'
                   }`}>
-                    {showBalance 
-                      ? (tx.type === TransactionType.INCOME ? '+' : '') + formatValue(getDisplayAmount(tx))
-                      : '••••••'}
+                    {!isPrivacyMode && tx.type === TransactionType.INCOME ? '+' : ''}{formatCurrency(getDisplayAmount(tx))}
                   </span>
                 </div>
               ))}
